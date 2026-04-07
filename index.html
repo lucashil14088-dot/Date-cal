@@ -3,60 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Date Calculator</title>
+    <title>My Countdowns</title>
     <style>
-        :root { --ios-bg: #f2f2f7; --ios-row: #ffffff; --ios-border: #c6c6c8; }
-        body { font-family: -apple-system, sans-serif; background: var(--ios-bg); margin: 0; padding: 0; }
-        .header { text-align: center; padding: 15px; font-weight: 600; background: white; border-bottom: 0.5px solid var(--ios-border); }
-        .section { margin-top: 20px; border-top: 0.5px solid var(--ios-border); background: var(--ios-row); }
-        .row { display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 0.5px solid var(--ios-border); align-items: center; }
-        input[type="date"] { border: none; font-size: 17px; color: #007aff; background: none; outline: none; }
-        .val { color: #8e8e93; font-variant-numeric: tabular-nums; text-align: right; }
-        .footer { position: fixed; bottom: 0; width: 100%; display: flex; background: #f9f9f9; border-top: 0.5px solid var(--ios-border); padding-bottom: 20px; }
-        .tab { flex: 1; text-align: center; padding: 10px; font-size: 10px; color: #8e8e93; }
-        .active { color: #007aff; }
+        :root { --ios-bg: #f2f2f7; --ios-row: #ffffff; --ios-border: #c6c6c8; --ios-blue: #007aff; }
+        body { font-family: -apple-system, sans-serif; background: var(--ios-bg); margin: 0; padding-bottom: 100px; }
+        
+        /* Header styling */
+        .header { background: white; padding: 50px 16px 15px 16px; border-bottom: 0.5px solid var(--ios-border); display: flex; justify-content: space-between; align-items: flex-end; }
+        .header h1 { margin: 0; font-size: 34px; font-weight: 700; color: #1c1c1e; }
+        .add-btn { color: var(--ios-blue); font-size: 17px; cursor: pointer; border: none; background: none; font-weight: 500; padding: 0; }
+        
+        /* List styling */
+        .list { margin-top: 20px; background: white; border-top: 0.5px solid var(--ios-border); border-bottom: 0.5px solid var(--ios-border); }
+        .item { padding: 12px 16px; border-bottom: 0.5px solid var(--ios-border); display: flex; justify-content: space-between; align-items: center; }
+        .item:last-child { border-bottom: none; }
+        .event-name { font-size: 17px; font-weight: 600; color: #1c1c1e; display: block; }
+        .event-date { font-size: 13px; color: #8e8e93; }
+        .countdown { color: #8e8e93; font-size: 15px; text-align: right; }
+        .delete-btn { color: #ff3b30; font-size: 18px; margin-left: 15px; background: none; border: none; padding: 5px; opacity: 0.6; }
+        
+        /* Modal Popup */
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-content { background: #f9f9f9; padding: 20px; border-radius: 14px; width: 85%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        input { width: 100%; margin: 8px 0; padding: 12px; box-sizing: border-box; border: 1px solid var(--ios-border); border-radius: 10px; font-size: 16px; outline: none; }
+        .modal-btns { display: flex; justify-content: space-around; margin-top: 15px; border-top: 0.5px solid var(--ios-border); padding-top: 10px; }
+        .modal-btns button { font-size: 17px; background: none; border: none; padding: 10px; flex: 1; }
     </style>
 </head>
 <body>
-    <div class="header">Date Calculator</div>
-    <div class="section">
-        <div class="row"><span>From</span><input type="date" id="d1" onchange="calc()"></div>
-        <div class="row"><span>To</span><input type="date" id="d2" onchange="calc()"></div>
+
+    <div class="header">
+        <h1>Events</h1>
+        <button class="add-btn" onclick="showModal()">Add Event</button>
     </div>
-    <div class="section">
-        <div class="row"><span>Total Days</span><span class="val" id="rDays">0</span></div>
-        <div class="row"><span>Duration</span><span class="val" id="rWeeks">0 Weeks, 0 Days</span></div>
-        <div class="row"><span>Hours</span><span class="val" id="rHours">0</span></div>
-        <div class="row"><span>Minutes</span><span class="val" id="rMin">0</span></div>
+
+    <div id="eventList" class="list">
+        </div>
+
+    <div id="modal">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 10px 0; text-align: center;">New Event</h3>
+            <input type="text" id="eventName" placeholder="Event Name (e.g. Birthday)">
+            <input type="date" id="eventDate">
+            <div class="modal-btns">
+                <button onclick="hideModal()" style="color:#007aff;">Cancel</button>
+                <button onclick="addEvent()" style="color:#007aff; font-weight:700;">Save</button>
+            </div>
+        </div>
     </div>
-    <div class="footer">
-        <div class="tab active">📅<br>Date</div>
-        <div class="tab">🕒<br>Time</div>
-        <div class="tab">⚙️<br>Settings</div>
-    </div>
+
     <script>
-        const savedD1 = localStorage.getItem('date1');
-        const savedD2 = localStorage.getItem('date2');
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('d1').value = savedD1 || today;
-        document.getElementById('d2').value = savedD2 || today;
-        calc();
-        function calc() {
-            const v1 = document.getElementById('d1').value;
-            const v2 = document.getElementById('d2').value;
-            localStorage.setItem('date1', v1);
-            localStorage.setItem('date2', v2);
-            const start = new Date(v1);
-            const end = new Date(v2);
-            const diff = Math.abs(end - start);
-            const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const weeks = Math.floor(totalDays / 7);
-            const daysLeft = totalDays % 7;
-            document.getElementById('rDays').innerText = totalDays.toLocaleString();
-            document.getElementById('rWeeks').innerText = weeks + " Weeks, " + daysLeft + " Days";
-            document.getElementById('rHours').innerText = (totalDays * 24).toLocaleString();
-            document.getElementById('rMin').innerText = (totalDays * 1440).toLocaleString();
+        let events = JSON.parse(localStorage.getItem('myEvents')) || [];
+
+        function showModal() { document.getElementById('modal').style.display = 'flex'; }
+        function hideModal() { 
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('eventName').value = '';
         }
+
+        function addEvent() {
+            const name = document.getElementById('eventName').value;
+            const date = document.getElementById('eventDate').value;
+            if(!name || !date) return alert("Please enter a name and date");
+
+            events.push({ id: Date.now(), name, date });
+            saveAndRender();
+            hideModal();
+        }
+
+        function deleteEvent(id) {
+            if(confirm("Delete this event?")) {
+                events = events.filter(e => e.id !== id);
+                saveAndRender();
+            }
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('myEvents', JSON.stringify(events));
+            const list = document.getElementById('eventList');
+            list.innerHTML = '';
+
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            // Sort by date soonest to furthest
+            events.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(ev => {
+                const target = new Date(ev.date);
+                const diff = target - today;
+                const totalDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                
+                let timeStr = "";
+                if (totalDays < 0) timeStr = "Passed";
+                else if (totalDays === 0) timeStr = "Today!";
+                else {
+                    const weeks = Math.floor(totalDays / 7);
+                    const days = totalDays % 7;
+                    timeStr = `${weeks}w, ${days}d left`;
+                }
+
+                list.innerHTML += `
+                    <div class="item">
+                        <div>
+                            <span class="event-name">${ev.name}</span>
+                            <span class="event-date">${ev.date}</span>
+                        </div>
+                        <div style="display:flex; align-items:center;">
+                            <span class="countdown">${timeStr}</span>
+                            <button class="delete-btn" onclick="deleteEvent(${ev.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        saveAndRender();
     </script>
 </body>
 </html>
