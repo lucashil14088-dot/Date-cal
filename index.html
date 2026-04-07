@@ -16,7 +16,7 @@
         .row:last-child { border-bottom: none; }
         .grey-row { background: #f2f2f7; }
         .val { color: #8e8e93; font-size: 17px; }
-        .blue-link { color: var(--ios-blue); font-size: 17px; }
+        input[type="date"] { border: none; font-family: inherit; font-size: 17px; color: var(--ios-blue); background: none; text-align: right; outline: none; width: 150px; }
         .switch { position: relative; display: inline-block; width: 51px; height: 31px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -25,102 +25,83 @@
         input:checked + .slider:before { transform: translateX(20px); }
         #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
         .modal-box { background: #f9f9f9; padding: 20px; border-radius: 14px; width: 80%; max-width: 300px; text-align: center; }
-        .modal-box input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--ios-border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .modal-box input[type="text"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--ios-border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         .modal-btns { display: flex; border-top: 0.5px solid var(--ios-border); margin-top: 15px; }
         .modal-btns button { flex: 1; padding: 12px; background: none; border: none; color: var(--ios-blue); font-size: 17px; }
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <h1>Events</h1>
-        <button class="add-btn" onclick="showModal()">Add Event</button>
-    </div>
-
+    <div class="header"><h1>Events</h1><button class="add-btn" onclick="showModal()">Add Event</button></div>
     <div id="mainContent"></div>
-
     <div id="modal">
         <div class="modal-box">
             <h3 style="margin:0">New Event</h3>
             <input type="text" id="newName" placeholder="Event Name">
-            <input type="date" id="newDate">
-            <div class="modal-btns">
-                <button onclick="hideModal()">Cancel</button>
-                <button onclick="saveEvent()" style="font-weight:600">Save</button>
-            </div>
+            <div class="modal-btns"><button onclick="hideModal()">Cancel</button><button onclick="saveEvent()" style="font-weight:600">Save</button></div>
         </div>
     </div>
 
     <script>
         let events = JSON.parse(localStorage.getItem('myEvents')) || [];
-        let includeToDate = false;
+        const todayStr = new Date().toISOString().split('T')[0];
 
         function showModal() { document.getElementById('modal').style.display = 'flex'; }
         function hideModal() { document.getElementById('modal').style.display = 'none'; }
 
         function saveEvent() {
             const name = document.getElementById('newName').value;
-            const date = document.getElementById('newDate').value;
-            if(name && date) {
-                events.push({ id: Date.now(), name, date });
-                localStorage.setItem('myEvents', JSON.stringify(events));
-                render();
-                hideModal();
+            if(name) {
+                events.push({ id: Date.now(), name, from: todayStr, to: todayStr, include: false });
+                updateStorage();
                 document.getElementById('newName').value = '';
+                hideModal();
             }
+        }
+
+        function updateEvent(id, field, value) {
+            const ev = events.find(e => e.id === id);
+            if(field === 'include') ev.include = value;
+            else ev[field] = value;
+            updateStorage();
         }
 
         function deleteEvent(id) {
             events = events.filter(e => e.id !== id);
-            localStorage.setItem('myEvents', JSON.stringify(events));
-            render();
+            updateStorage();
         }
 
-        function toggleInclude() {
-            includeToDate = !includeToDate;
+        function updateStorage() {
+            localStorage.setItem('myEvents', JSON.stringify(events));
             render();
         }
 
         function render() {
             const container = document.getElementById('mainContent');
             container.innerHTML = '';
-            const today = new Date();
-            today.setHours(0,0,0,0);
-
             events.forEach(ev => {
-                const target = new Date(ev.date);
-                target.setHours(0,0,0,0);
+                const d1 = new Date(ev.from + "T00:00:00");
+                const d2 = new Date(ev.to + "T00:00:00");
+                let diff = Math.abs(d2 - d1);
+                let totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+                if (ev.include) totalDays += 1;
                 
-                let diffTime = Math.abs(target - today);
-                let totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                if (includeToDate) totalDays += 1;
-                
+                const years = Math.floor(totalDays / 365);
+                const months = Math.floor((totalDays % 365) / 30.44);
                 const weeks = Math.floor(totalDays / 7);
                 const daysLeft = totalDays % 7;
-                
-                // Detailed Month/Year Logic
-                const years = Math.floor(totalDays / 365);
-                const months = Math.floor((totalDays % 365) / 30);
-                const monthDays = (totalDays % 365) % 30;
 
                 container.innerHTML += `
                     <div class="section-label">${ev.name}</div>
                     <div class="list-container">
-                        <div class="row grey-row"><span>From</span><span class="blue-link">${today.toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'})}</span></div>
-                        <div class="row"><span>To</span><span class="blue-link">${target.toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'})}</span></div>
-                        <div class="row"><span>Include To Date</span>
-                            <label class="switch">
-                                <input type="checkbox" ${includeToDate ? 'checked' : ''} onchange="toggleInclude()">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
+                        <div class="row grey-row"><span>From</span><input type="date" value="${ev.from}" onchange="updateEvent(${ev.id}, 'from', this.value)"></div>
+                        <div class="row"><span>To</span><input type="date" value="${ev.to}" onchange="updateEvent(${ev.id}, 'to', this.value)"></div>
+                        <div class="row"><span>Include To Date</span><label class="switch"><input type="checkbox" ${ev.include ? 'checked' : ''} onchange="updateEvent(${ev.id}, 'include', this.checked)"><span class="slider"></span></label></div>
                         <div class="row"><span>Days</span><span class="val">${totalDays} Days</span></div>
                         <div class="row"><span>Weeks</span><span class="val">${weeks} Weeks ${daysLeft} Days</span></div>
-                        <div class="row"><span>Months</span><span class="val">${months} Months ${monthDays} Days</span></div>
+                        <div class="row"><span>Months</span><span class="val">${months} Months ${totalDays % 30} Days</span></div>
                         <div class="row"><span>Years</span><span class="val">${years} Years ${totalDays % 365} Days</span></div>
                         <div class="row"><button onclick="deleteEvent(${ev.id})" style="color:#ff3b30; background:none; border:none; padding:0; font-size:17px;">Delete Event</button></div>
-                    </div>
-                `;
+                    </div>`;
             });
         }
         render();
