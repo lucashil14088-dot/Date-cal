@@ -6,33 +6,23 @@
     <title>My Events</title>
     <style>
         :root { --ios-bg: #f2f2f7; --ios-row: #ffffff; --ios-border: #c6c6c8; --ios-blue: #007aff; }
-        body { font-family: -apple-system, sans-serif; background: var(--ios-bg); margin: 0; color: #000; }
-        
-        /* Header */
+        body { font-family: -apple-system, sans-serif; background: var(--ios-bg); margin: 0; color: #000; padding-bottom: 50px; }
         .header { background: white; padding: 50px 16px 15px 16px; border-bottom: 0.5px solid var(--ios-border); display: flex; justify-content: space-between; align-items: flex-end; }
         .header h1 { margin: 0; font-size: 34px; font-weight: 700; }
         .add-btn { color: var(--ios-blue); font-size: 17px; background: none; border: none; font-weight: 500; }
-
-        /* List View */
         .section-label { padding: 20px 16px 8px 16px; font-size: 13px; color: #6e6e73; text-transform: uppercase; }
-        .list-container { background: white; border-top: 0.5px solid var(--ios-border); border-bottom: 0.5px solid var(--ios-border); }
+        .list-container { background: white; border-top: 0.5px solid var(--ios-border); border-bottom: 0.5px solid var(--ios-border); margin-bottom: 10px; }
         .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 0.5px solid var(--ios-border); min-height: 44px; }
         .row:last-child { border-bottom: none; }
-        .grey-row { background: #e5e5ea; }
-        
-        .event-title { font-size: 17px; font-weight: 400; }
-        .event-sub { font-size: 15px; color: #8e8e93; }
-        .blue-text { color: var(--ios-blue); }
-        
-        /* Toggle Switch */
+        .grey-row { background: #f2f2f7; }
+        .val { color: #8e8e93; font-size: 17px; }
+        .blue-link { color: var(--ios-blue); font-size: 17px; }
         .switch { position: relative; display: inline-block; width: 51px; height: 31px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 27px; width: 27px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+        .slider:before { position: absolute; content: ""; height: 27px; width: 27px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #34c759; }
         input:checked + .slider:before { transform: translateX(20px); }
-
-        /* Modal */
         #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
         .modal-box { background: #f9f9f9; padding: 20px; border-radius: 14px; width: 80%; max-width: 300px; text-align: center; }
         .modal-box input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--ios-border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
@@ -76,6 +66,7 @@
                 localStorage.setItem('myEvents', JSON.stringify(events));
                 render();
                 hideModal();
+                document.getElementById('newName').value = '';
             }
         }
 
@@ -98,34 +89,36 @@
 
             events.forEach(ev => {
                 const target = new Date(ev.date);
-                let diff = target - today;
-                let totalDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                target.setHours(0,0,0,0);
+                
+                let diffTime = Math.abs(target - today);
+                let totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                 if (includeToDate) totalDays += 1;
                 
                 const weeks = Math.floor(totalDays / 7);
-                const days = totalDays % 7;
+                const daysLeft = totalDays % 7;
+                
+                // Detailed Month/Year Logic
+                const years = Math.floor(totalDays / 365);
+                const months = Math.floor((totalDays % 365) / 30);
+                const monthDays = (totalDays % 365) % 30;
 
                 container.innerHTML += `
                     <div class="section-label">${ev.name}</div>
                     <div class="list-container">
-                        <div class="row grey-row">
-                            <span>From</span>
-                            <span class="blue-text">${today.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})}</span>
-                        </div>
-                        <div class="row">
-                            <span>To</span>
-                            <span class="blue-text">${target.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})}</span>
-                        </div>
-                        <div class="row">
-                            <span>Include To Date</span>
+                        <div class="row grey-row"><span>From</span><span class="blue-link">${today.toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'})}</span></div>
+                        <div class="row"><span>To</span><span class="blue-link">${target.toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'})}</span></div>
+                        <div class="row"><span>Include To Date</span>
                             <label class="switch">
                                 <input type="checkbox" ${includeToDate ? 'checked' : ''} onchange="toggleInclude()">
                                 <span class="slider"></span>
                             </label>
                         </div>
-                        <div class="row"><span>Days</span><span class="event-sub">${totalDays} Days</span></div>
-                        <div class="row"><span>Weeks</span><span class="event-sub">${weeks} Weeks ${days} Days</span></div>
-                        <div class="row"><button onclick="deleteEvent(${ev.id})" style="color:#ff3b30; background:none; border:none; padding:0; font-size:15px;">Delete Event</button></div>
+                        <div class="row"><span>Days</span><span class="val">${totalDays} Days</span></div>
+                        <div class="row"><span>Weeks</span><span class="val">${weeks} Weeks ${daysLeft} Days</span></div>
+                        <div class="row"><span>Months</span><span class="val">${months} Months ${monthDays} Days</span></div>
+                        <div class="row"><span>Years</span><span class="val">${years} Years ${totalDays % 365} Days</span></div>
+                        <div class="row"><button onclick="deleteEvent(${ev.id})" style="color:#ff3b30; background:none; border:none; padding:0; font-size:17px;">Delete Event</button></div>
                     </div>
                 `;
             });
