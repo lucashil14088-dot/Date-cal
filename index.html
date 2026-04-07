@@ -11,7 +11,7 @@
         .section { margin-top: 20px; border-top: 0.5px solid var(--ios-border); background: var(--ios-row); }
         .row { display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 0.5px solid var(--ios-border); align-items: center; }
         input[type="date"] { border: none; font-size: 17px; color: #007aff; background: none; outline: none; }
-        .val { color: #8e8e93; font-variant-numeric: tabular-nums; }
+        .val { color: #8e8e93; font-variant-numeric: tabular-nums; text-align: right; }
         .footer { position: fixed; bottom: 0; width: 100%; display: flex; background: #f9f9f9; border-top: 0.5px solid var(--ios-border); padding-bottom: 20px; }
         .tab { flex: 1; text-align: center; padding: 10px; font-size: 10px; color: #8e8e93; }
         .active { color: #007aff; }
@@ -24,8 +24,8 @@
         <div class="row"><span>To</span><input type="date" id="d2" onchange="calc()"></div>
     </div>
     <div class="section">
-        <div class="row"><span>Days</span><span class="val" id="rDays">0</span></div>
-        <div class="row"><span>Weeks</span><span class="val" id="rWeeks">0</span></div>
+        <div class="row"><span>Total Days</span><span class="val" id="rDays">0</span></div>
+        <div class="row"><span>Duration</span><span class="val" id="rWeeks">0 Weeks, 0 Days</span></div>
         <div class="row"><span>Hours</span><span class="val" id="rHours">0</span></div>
         <div class="row"><span>Minutes</span><span class="val" id="rMin">0</span></div>
     </div>
@@ -35,36 +35,28 @@
         <div class="tab">⚙️<br>Settings</div>
     </div>
     <script>
-                const savedD1 = localStorage.getItem('date1');
+        const savedD1 = localStorage.getItem('date1');
         const savedD2 = localStorage.getItem('date2');
         const today = new Date().toISOString().split('T')[0];
-
         document.getElementById('d1').value = savedD1 || today;
         document.getElementById('d2').value = savedD2 || today;
-
         calc();
-
         function calc() {
-            const d1Value = document.getElementById('d1').value;
-            const d2Value = document.getElementById('d2').value;
-
-            localStorage.setItem('date1', d1Value);
-            localStorage.setItem('date2', d2Value);
-
-            const start = new Date(d1Value);
-            const end = new Date(d2Value);
+            const v1 = document.getElementById('d1').value;
+            const v2 = document.getElementById('d2').value;
+            localStorage.setItem('date1', v1);
+            localStorage.setItem('date2', v2);
+            const start = new Date(v1);
+            const end = new Date(v2);
             const diff = Math.abs(end - start);
             const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
             const weeks = Math.floor(totalDays / 7);
             const daysLeft = totalDays % 7;
-            
             document.getElementById('rDays').innerText = totalDays.toLocaleString();
             document.getElementById('rWeeks').innerText = weeks + " Weeks, " + daysLeft + " Days";
             document.getElementById('rHours').innerText = (totalDays * 24).toLocaleString();
             document.getElementById('rMin').innerText = (totalDays * 1440).toLocaleString();
         }
-
-
     </script>
 </body>
 </html>
