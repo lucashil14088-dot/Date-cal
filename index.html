@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Events</title>
+    <title>My Progress</title>
     <style>
         :root { --ios-bg: #f2f2f7; --ios-row: #ffffff; --ios-border: #c6c6c8; --ios-blue: #007aff; }
         body { font-family: -apple-system, sans-serif; background: var(--ios-bg); margin: 0; color: #000; padding-bottom: 50px; }
@@ -25,7 +25,7 @@
         input:checked + .slider:before { transform: translateX(20px); }
         #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
         .modal-box { background: #f9f9f9; padding: 20px; border-radius: 14px; width: 80%; max-width: 300px; text-align: center; }
-        .modal-box input[type="text"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--ios-border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .modal-box input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid var(--ios-border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         .modal-btns { display: flex; border-top: 0.5px solid var(--ios-border); margin-top: 15px; }
         .modal-btns button { flex: 1; padding: 12px; background: none; border: none; color: var(--ios-blue); font-size: 17px; }
     </style>
@@ -37,21 +37,25 @@
         <div class="modal-box">
             <h3 style="margin:0">New Event</h3>
             <input type="text" id="newName" placeholder="Event Name">
+            <input type="date" id="newFromDate" value="${new Date().toISOString().split('T')[0]}">
             <div class="modal-btns"><button onclick="hideModal()">Cancel</button><button onclick="saveEvent()" style="font-weight:600">Save</button></div>
         </div>
     </div>
 
     <script>
         let events = JSON.parse(localStorage.getItem('myEvents')) || [];
-        const todayStr = new Date().toISOString().split('T')[0];
 
-        function showModal() { document.getElementById('modal').style.display = 'flex'; }
+        function showModal() { 
+            document.getElementById('newFromDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('modal').style.display = 'flex'; 
+        }
         function hideModal() { document.getElementById('modal').style.display = 'none'; }
 
         function saveEvent() {
             const name = document.getElementById('newName').value;
-            if(name) {
-                events.push({ id: Date.now(), name, from: todayStr, to: todayStr, include: false });
+            const fromDate = document.getElementById('newFromDate').value;
+            if(name && fromDate) {
+                events.push({ id: Date.now(), name, from: fromDate, include: false });
                 updateStorage();
                 document.getElementById('newName').value = '';
                 hideModal();
@@ -60,8 +64,7 @@
 
         function updateEvent(id, field, value) {
             const ev = events.find(e => e.id === id);
-            if(field === 'include') ev.include = value;
-            else ev[field] = value;
+            ev[field] = value;
             updateStorage();
         }
 
@@ -78,13 +81,22 @@
         function render() {
             const container = document.getElementById('mainContent');
             container.innerHTML = '';
+            
+            // Get "Today" fresh
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
             events.forEach(ev => {
-                const d1 = new Date(ev.from + "T00:00:00");
-                const d2 = new Date(ev.to + "T00:00:00");
-                let diff = Math.abs(d2 - d1);
+                const start = new Date(ev.from + "T00:00:00");
+                const end = today;
+                
+                let diff = end - start;
                 let totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
                 if (ev.include) totalDays += 1;
                 
+                // Keep numbers at 0 if the start date is in the future
+                if (totalDays < 0) totalDays = 0;
+
                 const years = Math.floor(totalDays / 365);
                 const months = Math.floor((totalDays % 365) / 30.44);
                 const weeks = Math.floor(totalDays / 7);
@@ -93,9 +105,21 @@
                 container.innerHTML += `
                     <div class="section-label">${ev.name}</div>
                     <div class="list-container">
-                        <div class="row grey-row"><span>From</span><input type="date" value="${ev.from}" onchange="updateEvent(${ev.id}, 'from', this.value)"></div>
-                        <div class="row"><span>To</span><input type="date" value="${ev.to}" onchange="updateEvent(${ev.id}, 'to', this.value)"></div>
-                        <div class="row"><span>Include To Date</span><label class="switch"><input type="checkbox" ${ev.include ? 'checked' : ''} onchange="updateEvent(${ev.id}, 'include', this.checked)"><span class="slider"></span></label></div>
+                        <div class="row grey-row">
+                            <span>From</span>
+                            <input type="date" value="${ev.from}" onchange="updateEvent(${ev.id}, 'from', this.value)">
+                        </div>
+                        <div class="row">
+                            <span>To (Current Date)</span>
+                            <span class="val" style="color:var(--ios-blue)">${today.toLocaleDateString(undefined, {month:'long', day:'numeric', year:'numeric'})}</span>
+                        </div>
+                        <div class="row">
+                            <span>Include Today</span>
+                            <label class="switch">
+                                <input type="checkbox" ${ev.include ? 'checked' : ''} onchange="updateEvent(${ev.id}, 'include', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
                         <div class="row"><span>Days</span><span class="val">${totalDays} Days</span></div>
                         <div class="row"><span>Weeks</span><span class="val">${weeks} Weeks ${daysLeft} Days</span></div>
                         <div class="row"><span>Months</span><span class="val">${months} Months ${totalDays % 30} Days</span></div>
